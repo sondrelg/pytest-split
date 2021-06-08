@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from warnings import warn
 
 from _pytest.config import create_terminal_writer, hookimpl
+from _pytest.reports import TestReport
 
 if TYPE_CHECKING:
     from typing import List, Tuple
@@ -186,10 +187,16 @@ class PytestSplitCachePlugin(Base):
         """
         terminal_reporter = self.config.pluginmanager.get_plugin("terminalreporter")
         test_durations = {}
+        first_test = True
 
         for test_reports in terminal_reporter.stats.values():
             for test_report in test_reports:
-                if hasattr(test_report, "duration"):
+                if isinstance(test_report, TestReport):
+                    if first_test and test_report.when == "setup":
+                        # Skip recording the setup time for the first test in the test suite
+                        # This can be removed if https://github.com/pytest-dev/pytest/issues/8741 gets fixed
+                        continue
+
                     # These ifs be removed after this is solved:
                     # https://github.com/spulec/freezegun/issues/286
                     if test_report.duration < 0:
