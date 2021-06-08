@@ -185,3 +185,28 @@ class TestSplitToSuites:
 
 def _passed_test_names(result):
     return [passed.nodeid.split("::")[-1] for passed in result.listoutcomes()[0]]
+
+
+def test_setup_time_is_not_recorded(testdir, durations_path):
+    testdir.makepyfile(
+        """
+        import pytest
+        import time
+
+        @pytest.fixture(autouse=True, scope="session")
+        def slow_start():
+            time.sleep(5)
+
+        def test_something():
+            time.sleep(1)
+
+        def test_something_else():
+            time.sleep(1)
+        """
+    )
+    testdir.inline_run("--store-durations", "--durations-path", durations_path)
+    with open(durations_path, "r") as f:
+        durations = json.load(f)
+        
+    for duration in durations.values():
+        assert duration < 2
